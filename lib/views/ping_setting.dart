@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:fl_clash/common/common.dart';
+﻿import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
@@ -13,25 +12,38 @@ enum PingType {
 
   final String label;
   const PingType(this.label);
+
+  static PingType fromString(String? name) {
+    if (name == null) return PingType.tcp;
+    return PingType.values.firstWhere(
+      (e) => e.name == name || e.label == name,
+      orElse: () => PingType.tcp,
+    );
+  }
 }
 
 class PingTypeNotifier extends Notifier<PingType> {
   @override
-  PingType build() => PingType.tcp;
+  PingType build() {
+    _loadFromPrefs();
+    return PingType.tcp;
+  }
 
-  void setType(PingType type) => state = type;
+  Future<void> _loadFromPrefs() async {
+    final saved = await preferences.getString('pingType');
+    if (saved != null) {
+      state = PingType.fromString(saved);
+    }
+  }
+
+  Future<void> setType(PingType type) async {
+    state = type;
+    await preferences.setString('pingType', type.name);
+  }
 }
 
-final pingTypeProvider = NotifierProvider<PingTypeNotifier, PingType>(PingTypeNotifier.new);
-
-class PingResultFormatNotifier extends Notifier<String> {
-  @override
-  String build() => 'Время';
-
-  void setFormat(String format) => state = format;
-}
-
-final pingResultFormatProvider = NotifierProvider<PingResultFormatNotifier, String>(PingResultFormatNotifier.new);
+final pingTypeProvider =
+    NotifierProvider<PingTypeNotifier, PingType>(PingTypeNotifier.new);
 
 class PingSettingView extends ConsumerStatefulWidget {
   const PingSettingView({super.key});
@@ -41,12 +53,15 @@ class PingSettingView extends ConsumerStatefulWidget {
 }
 
 class _PingSettingViewState extends ConsumerState<PingSettingView> {
+  late PingType _selectedType;
   late final TextEditingController _urlController;
 
   @override
   void initState() {
     super.initState();
-    final currentUrl = ref.read(appSettingProvider.select((state) => state.testUrl));
+    _selectedType = ref.read(pingTypeProvider);
+    final currentUrl =
+        ref.read(appSettingProvider.select((state) => state.testUrl));
     _urlController = TextEditingController(text: currentUrl);
   }
 
@@ -54,6 +69,41 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
   void dispose() {
     _urlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _applySettings() async {
+    // 1. Save ping type
+    await ref.read(pingTypeProvider.notifier).setType(_selectedType);
+
+    // 2. Save test URL
+    final newUrl = _urlController.text.trim();
+    if (newUrl.isNotEmpty) {
+      ref
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(testUrl: newUrl));
+    }
+
+    if (!mounted) return;
+
+    // 3. Show feedback SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Настройки применены: тип «${_selectedType.label}»',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Widget _buildSectionHeader(String title) {
@@ -71,7 +121,6 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
   }
 
   Widget _buildPingTypeSection(ThemeData theme) {
-    final selectedType = ref.watch(pingTypeProvider);
     final cardColor = theme.cardColor.withOpacity(0.5);
 
     return Container(
@@ -87,22 +136,29 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
             InkWell(
               borderRadius: BorderRadius.vertical(
                 top: i == 0 ? const Radius.circular(8) : Radius.zero,
-                bottom: i == PingType.values.length - 1 ? const Radius.circular(8) : Radius.zero,
+                bottom: i == PingType.values.length - 1
+                    ? const Radius.circular(8)
+                    : Radius.zero,
               ),
               onTap: () {
-                ref.read(pingTypeProvider.notifier).setType(PingType.values[i]);
+                setState(() {
+                  _selectedType = PingType.values[i];
+                });
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     Radio<PingType>(
                       value: PingType.values[i],
-                      groupValue: selectedType,
+                      groupValue: _selectedType,
                       activeColor: theme.colorScheme.primary,
                       onChanged: (value) {
                         if (value != null) {
-                          ref.read(pingTypeProvider.notifier).setType(value);
+                          setState(() {
+                            _selectedType = value;
+                          });
                         }
                       },
                     ),
@@ -140,61 +196,33 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
           isDense: true,
           contentPadding: EdgeInsets.symmetric(vertical: 12),
         ),
-        onChanged: (value) {
-          if (value.isNotEmpty) {
-            ref.read(appSettingProvider.notifier).update((state) => state.copyWith(testUrl: value));
-          }
-        },
       ),
     );
   }
 
-  Widget _buildInterfaceSection(ThemeData theme) {
-    final resultFormat = ref.watch(pingResultFormatProvider);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white10),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Результат пинга',
+  Widget _buildApplyButton(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: theme.colorScheme.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: _applySettings,
+          icon: const Icon(Icons.check, size: 20),
+          label: const Text(
+            'Применить',
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: resultFormat,
-                isDense: true,
-                dropdownColor: theme.cardColor,
-                items: const [
-                  DropdownMenuItem(value: 'Время', child: Text('Время', style: TextStyle(fontSize: 13))),
-                  DropdownMenuItem(value: 'Значок', child: Text('Значок', style: TextStyle(fontSize: 13))),
-                  DropdownMenuItem(value: 'Время и значок', child: Text('Время и значок', style: TextStyle(fontSize: 13))),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    ref.read(pingResultFormatProvider.notifier).setFormat(value);
-                  }
-                },
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -212,8 +240,7 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
           _buildPingTypeSection(theme),
           _buildSectionHeader('Тестовый URL (via Proxy)'),
           _buildTestUrlSection(theme),
-          _buildSectionHeader('Настройки интерфейса'),
-          _buildInterfaceSection(theme),
+          _buildApplyButton(theme),
         ],
       ),
     );

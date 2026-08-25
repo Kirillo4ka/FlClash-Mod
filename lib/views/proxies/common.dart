@@ -45,12 +45,12 @@ void updateCurrentUnfoldSet(Set<String> value) {
       .updateCurrentUnfoldSet(value);
 }
 
-Future<int> _tcpPingFallback(String proxyName, int? profileId) async {
-  if (profileId == null) return -1;
+Future<MapEntry<String, int>?> _getProxyHostAndPort(String proxyName, int? profileId) async {
+  if (profileId == null) return null;
   try {
     final path = await appPath.getProfilePath(profileId.toString());
     final file = File(path);
-    if (!await file.exists()) return -1;
+    if (!await file.exists()) return null;
     final lines = await file.readAsLines();
     bool inTargetProxy = false;
     String server = '';
@@ -60,7 +60,7 @@ Future<int> _tcpPingFallback(String proxyName, int? profileId) async {
       final t = line.trim();
       if (t.startsWith('- name:') || t.startsWith('name:')) {
         var n = t.substring(t.indexOf('name:') + 5).trim();
-        if (n.startsWith('"') && n.endsWith('"') && n.length >= 2) {
+        if ((n.startsWith('"') && n.endsWith('"')) || (n.startsWith("'") && n.endsWith("'"))) {
           n = n.substring(1, n.length - 1);
         }
         if (n == proxyName) {
@@ -74,25 +74,74 @@ Future<int> _tcpPingFallback(String proxyName, int? profileId) async {
       }
       if (inTargetProxy) {
         if (t.startsWith('server:')) {
-          server = t.substring(7).trim().replaceAll('"', '');
+          server = t.substring(7).trim().replaceAll('"', '').replaceAll("'", '');
         } else if (t.startsWith('port:')) {
-          port = int.tryParse(t.substring(5).trim()) ?? 0;
+          port = int.tryParse(t.substring(5).trim().replaceAll('"', '').replaceAll("'", '')) ?? 0;
         }
         if (server.isNotEmpty && port > 0) {
-          break;
+          return MapEntry(server, port);
         }
       }
     }
+  } catch (_) {}
+  return null;
+}
 
-    if (server.isNotEmpty && port > 0) {
-      final sw = Stopwatch()..start();
-      final socket = await Socket.connect(server, port, timeout: const Duration(seconds: 3));
-      sw.stop();
-      socket.destroy();
-      return sw.elapsedMilliseconds;
+Future<int> _measureTcpPing(String proxyName, int? profileId) async {
+  final entry = await _getProxyHostAndPort(proxyName, profileId);
+  if (entry == null) return -1;
+  try {
+    final sw = Stopwatch()..start();
+    final socket = await Socket.connect(entry.key, entry.value, timeout: const Duration(seconds: 3));
+    sw.stop();
+    socket.destroy();
+    return sw.elapsedMilliseconds;
+  } catch (_) {
+    return -1;
+  }
+}
+
+Future<int> _measureIcmpPing(String proxyName, int? profileId) async {
+  final entry = await _getProxyHostAndPort(proxyName, profileId);
+  if (entry == null) return -1;
+  try {
+    if (Platform.isWindows) {
+      final res = await Process.run('ping', ['-n', '1', '-w', '2000', entry.key], stdoutEncoding: systemEncoding);
+      final out = res.stdout.toString();
+      final match = RegExp(r'[=<](\d+)\s*(?:ms|мс|¬б)', caseSensitive: false).firstMatch(out) ??
+                    RegExp(r'(?:time|время|ўаҐ¬п)[=<](\d+)', caseSensitive: false).firstMatch(out);
+      if (match != null) {
+        return int.tryParse(match.group(1)!) ?? -1;
+      }
+    } else {
+      final res = await Process.run('ping', ['-c', '1', '-W', '2', entry.key]);
+      final out = res.stdout.toString();
+      final match = RegExp(r'time=(\d+(?:\.\d+)?)', caseSensitive: false).firstMatch(out);
+      if (match != null) {
+        return double.tryParse(match.group(1)!)?.round() ?? -1;
+      }
     }
   } catch (_) {}
   return -1;
+}
+
+Future<int> _measureProxyGet(String proxyName, String testUrl) async {
+  try {
+    final delay = await coreController.getDelay(testUrl, proxyName);
+    return delay.value ?? -1;
+  } catch (_) {
+    return -1;
+  }
+}
+
+Future<int> _measureProxyHead(String proxyName, String testUrl) async {
+  try {
+    final headUrl = testUrl.contains('generate_204') ? testUrl : '$testUrl/generate_204';
+    final delay = await coreController.getDelay(headUrl, proxyName);
+    return delay.value ?? -1;
+  } catch (_) {
+    return -1;
+  }
 }
 
 Future<void> proxyDelayTest(Proxy proxy, [String? testUrl]) async {
@@ -116,30 +165,26 @@ Future<void> proxyDelayTest(Proxy proxy, [String? testUrl]) async {
       .setDelay(Delay(url: currentTestUrl, name: state.proxyName, value: 0));
 
   final pingType = ref.read(pingTypeProvider);
-  if (pingType == PingType.tcp) {
-    final tcpValue = await _tcpPingFallback(state.proxyName, currentProfile?.id);
-    ref
-        .read(proxiesActionProvider.notifier)
-        .setDelay(Delay(url: currentTestUrl, name: state.proxyName, value: tcpValue));
-    return;
+  int delayValue = -1;
+
+  switch (pingType) {
+    case PingType.tcp:
+      delayValue = await _measureTcpPing(state.proxyName, currentProfile?.id);
+      break;
+    case PingType.icmp:
+      delayValue = await _measureIcmpPing(state.proxyName, currentProfile?.id);
+      break;
+    case PingType.proxyGet:
+      delayValue = await _measureProxyGet(state.proxyName, currentTestUrl);
+      break;
+    case PingType.proxyHead:
+      delayValue = await _measureProxyHead(state.proxyName, currentTestUrl);
+      break;
   }
 
-  try {
-    final delay = await coreController.getDelay(
-      currentTestUrl,
-      state.proxyName,
-    );
-    if ((delay.value ?? 0) > 0) {
-      ref.read(proxiesActionProvider.notifier).setDelay(delay);
-      return;
-    }
-  } catch (_) {}
-
-  // Fallback to TCP ping (handshake check like in Happ)
-  final tcpValue = await _tcpPingFallback(state.proxyName, currentProfile?.id);
   ref
       .read(proxiesActionProvider.notifier)
-      .setDelay(Delay(url: currentTestUrl, name: state.proxyName, value: tcpValue));
+      .setDelay(Delay(url: currentTestUrl, name: state.proxyName, value: delayValue));
 }
 
 Future<void> delayTest(List<Proxy> proxies, [String? testUrl]) async {
