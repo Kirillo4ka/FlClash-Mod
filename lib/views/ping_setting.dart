@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -183,7 +183,8 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
                 dropdownColor: theme.cardColor,
                 items: const [
                   DropdownMenuItem(value: 'Время', child: Text('Время', style: TextStyle(fontSize: 13))),
-                  DropdownMenuItem(value: 'мс', child: Text('мс', style: TextStyle(fontSize: 13))),
+                  DropdownMenuItem(value: 'Значок', child: Text('Значок', style: TextStyle(fontSize: 13))),
+                  DropdownMenuItem(value: 'Время и значок', child: Text('Время и значок', style: TextStyle(fontSize: 13))),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -203,7 +204,7 @@ class _PingSettingViewState extends ConsumerState<PingSettingView> {
     final theme = Theme.of(context);
 
     return BaseScaffold(
-      title: '${context.appLocalizations.settings} > Пинг',
+      title: '${context.appLocalizations.tools} > Пинг',
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

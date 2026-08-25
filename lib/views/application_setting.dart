@@ -247,27 +247,12 @@ class AutoCheckUpdateItem extends ConsumerWidget {
   }
 }
 
-class PingSettingItem extends StatelessWidget {
-  const PingSettingItem({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListItem.open(
-      leading: const Icon(Icons.network_ping),
-      title: const Text('Пинг'),
-      subtitle: const Text('Тип замера задержки, тестовый URL и параметры'),
-      widget: const PingSettingView(),
-    );
-  }
-}
-
 class ApplicationSettingView extends StatelessWidget {
   const ApplicationSettingView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> items = [
-      const PingSettingItem(),
       const MinimizeItem(),
       if (system.isDesktop) ...[
         const AutoLaunchItem(),

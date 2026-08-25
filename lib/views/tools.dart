@@ -19,6 +19,7 @@ import 'package:path/path.dart' show dirname, join;
 
 import 'config/advanced.dart';
 import 'developer.dart';
+import 'ping_setting.dart';
 import 'theme.dart';
 
 class ToolsView extends ConsumerStatefulWidget {
@@ -78,6 +79,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         if (system.isAndroid) const _AccessItem(),
         const _ConfigItem(),
         const _AdvancedConfigItem(),
+        const _PingItem(),
         const _SettingItem(),
       ],
     );
@@ -251,6 +253,20 @@ class _AdvancedConfigItem extends StatelessWidget {
       title: Text(context.appLocalizations.advancedConfig),
       subtitle: Text(context.appLocalizations.advancedConfigDesc),
       widget: const AdvancedConfigView(),
+    );
+  }
+}
+
+class _PingItem extends StatelessWidget {
+  const _PingItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListItem.open(
+      leading: const Icon(Icons.network_ping),
+      title: const Text('Пинг'),
+      subtitle: const Text('Тип замера задержки, тестовый URL и параметры'),
+      widget: const PingSettingView(),
     );
   }
 }
