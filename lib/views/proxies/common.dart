@@ -6,6 +6,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/ping_setting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 double get listHeaderHeight {
@@ -113,6 +114,16 @@ Future<void> proxyDelayTest(Proxy proxy, [String? testUrl]) async {
   ref
       .read(proxiesActionProvider.notifier)
       .setDelay(Delay(url: currentTestUrl, name: state.proxyName, value: 0));
+
+  final pingType = ref.read(pingTypeProvider);
+  if (pingType == PingType.tcp) {
+    final tcpValue = await _tcpPingFallback(state.proxyName, currentProfile?.id);
+    ref
+        .read(proxiesActionProvider.notifier)
+        .setDelay(Delay(url: currentTestUrl, name: state.proxyName, value: tcpValue));
+    return;
+  }
+
   try {
     final delay = await coreController.getDelay(
       currentTestUrl,
