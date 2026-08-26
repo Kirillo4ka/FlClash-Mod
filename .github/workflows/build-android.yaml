@@ -1,0 +1,82 @@
+﻿name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-android:
+    name: Build Android APKs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: core/go.sum
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          add-to-path: true
+          link-to-sdk: true
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.29.0'
+          cache: true
+
+      - name: Create Keystore and Signing Properties
+        run: |
+          keytool -genkey -v -keystore android/app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias flclashmod -storepass android -keypass android -dname "CN=Kirillo4ka, OU=FlClashMod, O=FlClashMod, L=City, S=State, C=RU"
+          cat <<EOF > android/local.properties
+          keyAlias=flclashmod
+          storePassword=android
+          keyPassword=android
+          EOF
+
+      - name: Install Dependencies
+        run: |
+          flutter pub get
+          dart pub get
+
+      - name: Build Android APKs
+        run: |
+          dart setup.dart android -v
+
+      - name: Rename and Prepare APKs
+        run: |
+          mkdir -p output_apks
+          find dist/ build/app/outputs/flutter-apk/ -name "*.apk" -exec cp {} output_apks/ \;
+          ls -la output_apks/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlClash-Mod-Android-APKs
+          path: output_apks/*.apk
+          if-no-files-found: error
+
+      - name: Upload APKs to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v0.8.96_mod --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload v0.8.96_mod output_apks/*.apk --clobber --repo "${{ github.repository }}"
+          fi
