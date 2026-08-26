@@ -47,7 +47,7 @@ String _randomPipeId() {
 
 final defaultTextScaleFactor =
     WidgetsBinding.instance.platformDispatcher.textScaleFactor;
-const httpTimeoutDuration = Duration(milliseconds: 5000);
+const httpTimeoutDuration = Duration(milliseconds: 6000);
 
 /// Keep at or below the Core's delay-test concurrency (`mBatch` in
 /// core/common.go). Surplus requests queue inside the Core behind a full wave

@@ -351,7 +351,7 @@ abstract class CoreHandlerInterface with CoreInterface {
     final data = await _invokeMethod<Map<String, dynamic>>(
       method: CoreMethod.asyncTestDelay,
       arguments: delayParams,
-      timeout: const Duration(seconds: 6),
+      timeout: const Duration(seconds: 8),
     );
     return data == null
         ? Delay(name: proxyName, value: -1, url: url)

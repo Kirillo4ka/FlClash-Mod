@@ -568,3 +568,74 @@ String _padBase64(String s) {
 }
 
 String _esc(String s) => s.replaceAll('"', '\\"');
+
+String enhanceMihomoProfileYaml(String yamlContent) {
+  if (yamlContent.trim().isEmpty) return yamlContent;
+  final lines = yamlContent.split('\n');
+  final result = <String>[];
+  bool inProxies = false;
+  bool hasFingerprintInCurrentProxy = false;
+  List<String> currentProxyLines = [];
+
+  void flushProxy() {
+    if (currentProxyLines.isEmpty) return;
+    if (!hasFingerprintInCurrentProxy) {
+      final isVlessOrTls = currentProxyLines.any((l) =>
+          l.contains('type: vless') ||
+          l.contains('type: vmess') ||
+          l.contains('type: trojan') ||
+          l.contains('type: hysteria2') ||
+          l.contains('type: tuic') ||
+          l.contains('type: ss') ||
+          l.contains('tls: true'));
+      if (isVlessOrTls) {
+        currentProxyLines.add('    client-fingerprint: chrome');
+      }
+    }
+    result.addAll(currentProxyLines);
+    currentProxyLines.clear();
+    hasFingerprintInCurrentProxy = false;
+  }
+
+  for (int i = 0; i < lines.length; i++) {
+    final line = lines[i];
+    final trimmed = line.trim();
+
+    if (trimmed.startsWith('proxies:')) {
+      inProxies = true;
+      result.add(line);
+      continue;
+    }
+
+    if (inProxies) {
+      if (trimmed.startsWith('proxy-groups:') || trimmed.startsWith('rules:') || trimmed.startsWith('dns:')) {
+        flushProxy();
+        inProxies = false;
+        result.add(line);
+        continue;
+      }
+
+      if (line.startsWith('  - name:') || line.startsWith('  - type:')) {
+        flushProxy();
+        currentProxyLines.add(line);
+      } else if (currentProxyLines.isNotEmpty) {
+        if (trimmed.startsWith('client-fingerprint:') || trimmed.startsWith('fingerprint:')) {
+          hasFingerprintInCurrentProxy = true;
+        }
+        currentProxyLines.add(line);
+      } else {
+        result.add(line);
+      }
+    } else {
+      result.add(line);
+    }
+  }
+  flushProxy();
+
+  var finalYaml = result.join('\n');
+  if (!finalYaml.contains('unified-delay:')) {
+    finalYaml = "unified-delay: true\ntcp-concurrent: true\n" + finalYaml;
+  }
+
+  return finalYaml;
+}

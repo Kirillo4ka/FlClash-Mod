@@ -296,6 +296,9 @@ extension ProfileExtension on Profile {
         if (yaml.isNotEmpty) {
           processedBytes = Uint8List.fromList(utf8.encode(yaml));
         }
+      } else {
+        final enhancedYaml = enhanceMihomoProfileYaml(content);
+        processedBytes = Uint8List.fromList(utf8.encode(enhancedYaml));
       }
     } catch (_) {}
 
@@ -311,6 +314,11 @@ extension ProfileExtension on Profile {
   }
 
   Future<Profile> saveFileWithPath(String path) async {
+    try {
+      final content = await File(path).readAsString();
+      final enhanced = enhanceMihomoProfileYaml(content);
+      await File(path).writeAsString(enhanced);
+    } catch (_) {}
     final message = await coreController.validateConfig(path);
     if (message.isNotEmpty) {
       throw message;
