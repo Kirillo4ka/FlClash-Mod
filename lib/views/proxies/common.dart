@@ -63,7 +63,7 @@ Future<MapEntry<String, int>?> _getProxyHostAndPort(String proxyName, int? profi
         if ((n.startsWith('"') && n.endsWith('"')) || (n.startsWith("'") && n.endsWith("'"))) {
           n = n.substring(1, n.length - 1);
         }
-        if (n == proxyName) {
+        if (n == proxyName || n.contains(proxyName) || proxyName.contains(n)) {
           inTargetProxy = true;
           server = '';
           port = 0;
