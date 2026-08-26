@@ -1,42 +1,105 @@
-﻿<div align="center">
+<div align="center">
 
-# FlClash-Mod
+# ⚡ FlClash-Mod
 
-**A powerful, multi-platform GUI proxy client based on Clash / Mihomo with custom enhancements, raw subscription parsing, and fast TCP Handshake ping.**
+<p align="center">
+  <strong>Мощный кроссплатформенный GUI-клиент на базе Clash / Mihomo с расширенным функционалом, умным парсером подписок, выбором режимов пинга и стильным интерфейсом.</strong>
+</p>
 
-[**Скачать последний релиз (Releases)**](https://github.com/Kirillo4ka/FlClash-Mod/releases/latest)
+[![Release](https://img.shields.io/github/v/release/Kirillo4ka/FlClash-Mod?color=7E69B5&label=%D0%A0%D0%B5%D0%BB%D0%B8%D0%B7)](https://github.com/Kirillo4ka/FlClash-Mod/releases/latest)
+[![Platform](https://img.shields.io/badge/%D0%9F%D0%BB%D0%B0%D1%82%D1%84%D0%BE%D1%80%D0%BC%D1%8B-Windows%20%7C%20Android-1A1920?logo=windows&logoColor=white)](https://github.com/Kirillo4ka/FlClash-Mod/releases/latest)
+[![License](https://img.shields.io/badge/%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-GPL--3.0-blue.svg)](LICENSE)
+
+<br/>
+
+[**📥 Скачать последний релиз (Releases)**](https://github.com/Kirillo4ka/FlClash-Mod/releases/latest) • [**✨ Возможности**](#-особенности-модификации) • [**💻 Установка**](#-скачать-и-установить) • [**📱 Android**](#-версия-для-android)
 
 </div>
 
 ---
 
-## Особенности модификации (Mod Features)
+## ✨ Особенности модификации
 
-- **Быстрый TCP Handshake замер задержки**: Реальные миллисекунды (2–20 мс) для узлов из белого списка (White-List), которые блокируют стандартный внешний HTTP-пинг.
-- **Универсальный парсер подписок и прямых ссылок**: Поддержка импорта списков и ссылок `vless://` (Reality, WS, gRPC, TCP), `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://`, а также Base64-подписок.
-- **Умное определение названия профиля**: Автоматическое извлечение имени подписки из `# profile-title:`, HTTP-заголовков или пути ссылки вместо случайных цифр.
-- **Встроенные оптимизированные DNS**: Автоматическая конфигурация безопасных DNS-резолверов для стабильного подключения.
-- **Стабильный рендерер на Windows**: Отключен сбойный Impeller OpenGLES, задействован нативный Direct3D/Skia бэкенд.
+### 🚀 1. Универсальный умный парсер подписок и прямых ссылок
+Больше не нужно конвертировать конфигурации вручную. FlClash-Mod поддерживает прямую вставку и импорт любых типов ссылок и подписок:
+- **Протоколы:** `vless://` (Reality, WS, gRPC, TCP), `vmess://`, `trojan://`, `ss://` (Shadowsocks), `hysteria2://`, `tuic://`.
+- **Форматы подписок:** Base64-кодированные списки узлов, сырые текстовые ссылки (raw config), стандартные Clash YAML профили.
+- **🏷 Автоматическое извлечение названий:** имя профиля мгновенно распознаётся из заголовков `#title:`, `Profile-Title`, `Content-Disposition` или параметров ссылки.
+
+### ⚡ 2. Выбор метода замера задержки (Пинг)
+В меню **«Инструменты» ➡️ «Пинг»** добавлено переключение режима тестирования задержки серверов:
+- **`TCP` (Handshake)** — прямой замер времени установки TCP-соединения до порта сервера (быстрый и точный отклик 2–20 мс, как в Happ/v2rayN). Идеально для узлов из White-List.
+- **`ICMP`** — стандартный системный ICMP-пинг.
+- **`via Proxy GET` / `via Proxy HEAD`** — полноценная проверка доступности ресурсов через прокси-туннель.
+- ⏱ **Увеличенный таймаут:** порог ожидания теста расширен до 6000 мс для предотвращения ложных таймаутов на нагруженных узлах.
+
+### 🛡 3. Автоматическая маскировка uTLS Fingerprint
+- Автоматическая установка отпечатка `chrome` для всех узлов Reality / TLS, что гарантирует максимальную проходимость через DPI и блокировки.
+
+### 🎨 4. Фирменный установщик для Windows (`FlClash-Mod-Setup.exe`)
+- 🪟 **Стильный дизайн в палитре FlClash:** бесшовный тёмный интерфейс, скруглённые углы окна в стиле Windows 11.
+- 🕹 **3D Magnetic Tilt кнопки:** объёмный наклон кнопок при наведении курсора с динамическим бликом.
+- ✨ **Шлейф курсора:** мягкий лавандовый след частиц за курсором мыши.
+- 🌊 **Анимированный индикатор распаковки (Liquid Wave):** плавная визуализация прогресса установки.
+- ⚙️ **Гибкая настройка:** выбор папки установки, запуск от имени администратора, добавление в автозагрузку и создание ярлыков на Рабочем столе и в меню «Пуск».
 
 ---
 
-## Скачать и установить
+## 📦 Скачать и установить
 
-Перейдите в раздел [**Releases**](https://github.com/Kirillo4ka/FlClash-Mod/releases/latest):
+Перейдите на страницу [**Последнего релиза**](https://github.com/Kirillo4ka/FlClash-Mod/releases/latest) и выберите подходящий файл:
 
-1. **`FlClash-Mod-Setup.exe`** — Установщик в один клик (сам распакует файлы и создаст ярлык на Рабочем столе).
-2. **`FlClash-Mod-v0.8.96_mod-Windows-x64.zip`** — Портативная версия (распакуйте в любую папку и запустите `FlClash-Mod.exe`).
+### 💻 Для Windows:
+| Файл | Описание |
+| :--- | :--- |
+| **`FlClash-Mod-Setup.exe`** | **Рекомендуется.** Полноценный стильный установщик (выбор пути, ярлыки, автозапуск). |
+| **`FlClash-Mod-v0.8.96_mod-Windows-x64.zip`** | Портативная версия (распакуйте в любую удобную папку и запускайте). |
+
+### 📱 Для Android:
+| Файл | Архитектура / Назначение |
+| :--- | :--- |
+| **`FlClash-Mod-v0.8.96_mod-Android-arm64-v8a.apk`** | **Рекомендуется.** Для всех современных смартфонов и планшетов (64-bit ARM). |
+| **`FlClash-Mod-v0.8.96_mod-Android-armeabi-v7a.apk`** | Для старых смартфонов, 32-битных устройств и ТВ-приставок (ARMv7). |
+| **`FlClash-Mod-v0.8.96_mod-Android-x86_64.apk`** | Для эмуляторов Android на ПК и планшетов на базе Intel/AMD. |
+
+> [!NOTE]
+> Все APK-файлы для Android подписаны полным набором цифровых подписей (V1 + V2 + V3) и устанавливаются без ошибок сертификатов на любой версии Android (от Android 7.0 до Android 15+).
 
 ---
 
-## Создатели и благодарности
+## 🛠 Сборка из исходного кода (Build)
 
-- **Kirillo4ka** — Создатель модификации FlClash-Mod
-- **chen08209** — Автор оригинального проекта FlClash
-- **MetaCubeX** — Разработчики ядра Mihomo (Clash.Meta)
+### Требования:
+- Flutter SDK `>=3.27.0` (Dart `>=3.8.0`)
+- Rust toolchain (`cargo`, `rustc`)
+- LLVM / Clang (для Windows)
+- Android SDK & NDK (для сборки APK)
+
+```bash
+# Клонирование репозитория
+git clone https://github.com/Kirillo4ka/FlClash-Mod.git
+cd FlClash-Mod
+
+# Установка зависимостей
+flutter pub get
+
+# Сборка для Windows
+flutter build windows --release
+
+# Сборка для Android (раздельные APK по архитектурам)
+flutter build apk --release --split-per-abi
+```
 
 ---
 
-## Лицензия
+## 👥 Благодарности (Credits)
 
-Проект распространяется под лицензией [GPL-3.0](LICENSE).
+- **[Kirillo4ka](https://github.com/Kirillo4ka)** — Автор и разработчик модификации **FlClash-Mod**.
+- **[chen08209 / FlClash](https://github.com/chen08209/FlClash)** — Автор оригинального проекта FlClash.
+- **[MetaCubeX / Mihomo](https://github.com/MetaCubeX/mihomo)** — Разработчики ядра Clash.Meta / Mihomo.
+
+---
+
+## 📄 Лицензия
+
+Проект распространяется под условиями лицензии [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
